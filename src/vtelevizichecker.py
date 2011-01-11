@@ -52,14 +52,14 @@ import logging
 
 
 __author__="Jirka Chadima"
-__date__ ="$Jan 10, 2011 8:36:24 PM$"
-__version__ = "0.3"
+__date__ ="$Jan 12, 2011 0:36:24 PM$"
+__version__ = "0.3.1"
 
 database = []
 rss_base_link = "http://vtelevizi.cz/export/rss/..."
 rss_update_time = 5
 timeshift_from_GMT = +2
-tell_me_n_minutes_before = 5
+tell_me_n_minutes_before = 2
 
 class Show:
     """Data unit for a single broadcast of a TV show"""
@@ -111,10 +111,10 @@ if __name__ == "__main__":
                     loctime = shift_loctime(datetime.datetime(*time.localtime()[:6]), tell_me_n_minutes_before)
                     showtime = shift_showtime(datetime.datetime(*database[0].timestamp[:6]), timeshift_from_GMT)
 
-                    if loctime <= showtime:
-                        del database[0]
+                    if showtime < datetime.datetime(*time.localtime()[:6]):
                         logging.info("Wiping out %s, already running" % database[0].title)
-                    if loctime > showtime:
+                        del database[0]
+                    elif loctime > showtime:
                         n = pynotify.Notification(database[0].title, showtime.strftime("%d. %m. %Y %H:%M"), "video-display")
                         n.show()
                         logging.info("Showing %s" % database[0].title)
