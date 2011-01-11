@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## V televizi notifier
+## vteleviziChecker
 ## -----------------------------------------------------------------------------
 ## This short python script is meant to serve as an 'integrated' notifier of
 ## TV shows in Ubuntu with libnotify. It is using the capabilites of web
@@ -19,17 +19,17 @@
 ## There are three configuration variables.
 ## - rss_base_link - link to your rss feed from vtelevizi.cz. You have to
 ##                   to include the token at the end of the URL.
+## - rss_update_time - after how many minutes the feed will be refreshed
 ## - timeshift_from_GMT - due to the feedparser time parsing method, we have to
 ##                        shift every showtime we recieve in correct timezone.
 ## - tell_m_n_minutes_before - how many minutes before the start of the show
 ##                             the notification should be displayed
 ##
 ## After configuration, the script runs in an infinite loop. Every minute, it
-## checkes whether some show is starting in n minutes. If yes, it shows the
-## notification. Every two minutes, RSS feed is checked again to include
-## updates. Items are stored in local list, every time RSS is refreshed,
-## the list is deleted. Every time a notification is shown, the show is deleted
-## from the list.
+## checkes whether some show is starting in n minutes. If yes, a notification
+## is shown. It is then shown every minute until the show starts. Every m
+## minutes, RSS feed is checked again to include updates. Items are stored
+## in local list, every time RSS is refreshed, the list is deleted.
 ##
 ##
 ## Author
