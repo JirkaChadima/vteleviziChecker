@@ -53,7 +53,7 @@ import logging
 
 __author__="Jirka Chadima"
 __date__ ="$Jan 10, 2011 8:36:24 PM$"
-__version__ = "0.1"
+__version__ = "0.2"
 
 database = []
 rss_base_link = "http://vtelevizi.cz/export/rss/..."
@@ -111,7 +111,7 @@ if __name__ == "__main__":
                     showtime = shift_showtime(datetime.datetime(*database[0].timestamp[:6]), timeshift_from_GMT)
 
                     if loctime > showtime:
-                        n = pynotify.Notification(database[0].title, showtime.strftime("%d. %m. %Y %H:%M"))
+                        n = pynotify.Notification(database[0].title, showtime.strftime("%d. %m. %Y %H:%M"), "video-display")
                         n.show()
                         logging.info("Showing and wiping out %s" % database[0].title)
                         del database[0]
