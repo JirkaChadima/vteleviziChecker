@@ -58,7 +58,7 @@ __version__ = "0.4"
 
 ### basic configuration
 
-#LOG_FILENAME = "vtelevizi.log"
+LOG_FILENAME = "vtelevizi.log"
 BASE_URL = "http://vtelevizi.cz/"
 DETAIL_SLUG = "detail/"
 
@@ -167,7 +167,7 @@ def refresh_rss():
 ### main loop
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
     
     logging.info("Starting v televizi checker %s" % __version__)
 
