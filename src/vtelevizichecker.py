@@ -19,12 +19,12 @@
 ## Usage
 ## -----
 ## There are three configuration variables.
-## - rss_base_link - link to your rss feed from vtelevizi.cz. You have to
+## - RSS_BASE_LINK - link to your rss feed from vtelevizi.cz. You have to
 ##                   to include the token at the end of the URL.
-## - rss_update_time - after how many minutes the feed will be refreshed
-## - timeshift_from_GMT - due to the feedparser time parsing method, we have to
+## - RSS_UPDATE_TIME - after how many minutes the feed will be refreshed
+## - TIMESHIFT_FROM_GMT - due to the feedparser time parsing method, we have to
 ##                        shift every showtime we recieve in correct timezone.
-## - tell_m_n_minutes_before - how many minutes before the start of the show
+## - TELL_ME_N_MINUTES_BEFORE - how many minutes before the start of the show
 ##                             the notification should be displayed
 ##
 ## After configuration, the script runs in an infinite loop. Every minute, it
@@ -53,13 +53,19 @@ import logging
 
 __author__="Jirka Chadima"
 __date__ ="$Jan 12, 2011 0:36:24 PM$"
-__version__ = "0.3.1"
+__version__ = "0.4"
 
 database = []
-rss_base_link = "http://vtelevizi.cz/export/rss/..."
-rss_update_time = 5
-timeshift_from_GMT = +2
-tell_me_n_minutes_before = 2
+
+LOGFILE = "vtelevizichecker.log"
+BASE_URL = "http://vtelevizi.cz/"
+DETAIL_SLUG = "detail/"
+
+
+RSS_BASE_LINK = BASE_URL+"export/rss/..."
+RSS_UPDATE_TIME = 5
+TIMESHIFT_FROM_GMT = +2
+TELL_ME_N_MINUTES_BEFORE = 2
 
 class Show:
     """Data unit for a single broadcast of a TV show"""
@@ -84,10 +90,10 @@ def refresh_rss():
     global database
     database = []
     try:
-        d = feedparser.parse(rss_base_link)
+        d = feedparser.parse(RSS_BASE_LINK)
         for item in d['items'] :
             loctime = datetime.datetime(*time.localtime()[:6])
-            showtime = shift_showtime(datetime.datetime(*item.date_parsed[:6]), timeshift_from_GMT)
+            showtime = shift_showtime(datetime.datetime(*item.date_parsed[:6]), TIMESHIFT_FROM_GMT)
             if loctime < showtime:
                 s = Show(item.title, item.date_parsed)
                 database.append(s)
@@ -96,20 +102,20 @@ def refresh_rss():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG, filename=LOGFILE)
     logging.info("Starting v televizi checker %s" % __version__)
 
     counter = 0
     try:
         while True:
-            if counter % rss_update_time == 0:
+            if counter % RSS_UPDATE_TIME == 0:
                 refresh_rss()
                 logging.info("There are currently %i records in your personal schedule..." % len(database))
 
             if len(database) > 0:
                 try:
-                    loctime = shift_loctime(datetime.datetime(*time.localtime()[:6]), tell_me_n_minutes_before)
-                    showtime = shift_showtime(datetime.datetime(*database[0].timestamp[:6]), timeshift_from_GMT)
+                    loctime = shift_loctime(datetime.datetime(*time.localtime()[:6]), TELL_ME_N_MINUTES_BEFORE)
+                    showtime = shift_showtime(datetime.datetime(*database[0].timestamp[:6]), TIMESHIFT_FROM_GMT)
 
                     if showtime < datetime.datetime(*time.localtime()[:6]):
                         logging.info("Wiping out %s, already running" % database[0].title)
