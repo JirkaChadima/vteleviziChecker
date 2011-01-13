@@ -43,35 +43,36 @@
 ### imports
 
 import time
+
+from HTMLParser import HTMLParser
 import datetime
-import pynotify
 import logging
+import pynotify
 import urllib
 from xml.etree import ElementTree
-from HTMLParser import HTMLParser
 
 ### credentials
 
-__author__="Jirka Chadima"
-__date__ ="$Jan 12, 2011 21:28:30 PM$"
-__version__ = "0.4"
+__author__ = "Jirka Chadima"
+__date__ = "$Thu Jan 13 13:23:35 CET 2011$"
+__version__ = "0.4.1"
 
 ### basic configuration
 
 LOG_FILENAME = "vtelevizi.log"
 BASE_URL = "http://vtelevizi.cz/"
 DETAIL_SLUG = "detail/"
+DEBUG = False
 
 ### user configuration
 
-RSS_BASE_LINK = BASE_URL+"export/rss/..."
+RSS_BASE_LINK = BASE_URL + "export/rss/..."
 RSS_UPDATE_TIME = 5
 TELL_ME_N_MINUTES_BEFORE = 2
 
 ### global structures
 
-database = []
-database_keys = {}
+database = {}
 
 ### helper classes
 
@@ -130,7 +131,8 @@ def refresh_rss():
     """Refreshes RSS feed and updates 'database' of TV shows. Does not append
     tv shows that are in progress."""
     logging.info("Refreshing RSS...")
-    global database, database_keys
+    global database
+    ids = {}
 
     try:
         feed = urllib.urlopen(RSS_BASE_LINK)
@@ -139,16 +141,24 @@ def refresh_rss():
         items = tree.find('channel').findall('item')
         loctime = datetime.datetime(*time.localtime()[:6])
 
-        for item in items :
-            title = item.find('title').text
-            id = item.find('link').text.split('=')[1]
-            date_parsed = datetime.datetime( *time.strptime(' '.join( item.find('pubDate').text.split(' ')[:-1] ), "%a, %d %b %Y %H:%M:%S")[:6] )
+        for item in items: # gather current ids in RSS
+            ids[item.find('link').text.split('=')[1]] = None
 
-            if id in database_keys: # skip existing items
+        # delete shows deleted in RSS feed
+        for sid in database.keys():
+            if sid not in ids: # show was removed from RSS feed, delete locally
+                del database[sid]
+
+        # append show added to RSS feed
+        for item in items:
+            id = item.find('link').text.split('=')[1]
+            if id in database: # skip existing items
                 continue
 
-            if loctime < date_parsed:
+            title = item.find('title').text
+            date_parsed = datetime.datetime(* time.strptime(' '.join(item.find('pubDate').text.split(' ')[:-1]), "%a, %d %b %Y %H:%M:%S")[:6])
 
+            if loctime < date_parsed:
                 logging.debug("Getting channel...")
                 f = urllib.urlopen(BASE_URL + DETAIL_SLUG + id)
                 retriever = ChannelRetriever()
@@ -157,39 +167,43 @@ def refresh_rss():
                 f.close()
                 retriever.close()
                 logging.debug("Got channel...")
-
-                s = Show(title, date_parsed, id, channel)
-                database.append(s)
-                database_keys[id] = None
+                database[id] = Show(title, date_parsed, id, channel)
+    
     except Exception, e:
         logging.error(e)
 
 ### main loop
 
 if __name__ == "__main__":
-    logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
+    if DEBUG:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
     
     logging.info("Starting v televizi checker %s" % __version__)
 
     counter = 0
+    db = database
     try:
         while True:
             if counter % RSS_UPDATE_TIME == 0:
                 refresh_rss()
+                db = sorted(database.values(), key=lambda show: show.timestamp)
                 logging.info("There are currently %i records in your personal schedule..." % len(database))
 
-            if len(database) > 0:
+            if len(db) > 0:
                 try:
                     loctime = shift_loctime(datetime.datetime(*time.localtime()[:6]), TELL_ME_N_MINUTES_BEFORE)
+                    show = db[0]
 
-                    if database[0].timestamp < datetime.datetime(*time.localtime()[:6]):
-                        logging.info("Wiping out %s, already running" % database[0].title)
-                        del database_keys[database[0].id]
-                        del database[0]
-                    elif loctime > database[0].timestamp:
-                        n = pynotify.Notification(database[0].title, database[0].channel+", "+database[0].timestamp.strftime("%d. %m. %Y %H:%M"), "video-display")
+                    if show.timestamp < datetime.datetime(*time.localtime()[:6]):
+                        logging.info("Wiping out %s, already running" % show.title)
+                        del database[show.id]
+                        del db[0]
+                    elif loctime > show.timestamp:
+                        n = pynotify.Notification(show.title, show.channel + ", " + show.timestamp.strftime("%d. %m. %Y %H:%M"), "video-display")
                         n.show()
-                        logging.info("Showing %s" % database[0].title)
+                        logging.info("Showing %s" % show.title)
                 except Exception, e:
                     logging.error("V televizi exception: ", e)
             counter += 1
