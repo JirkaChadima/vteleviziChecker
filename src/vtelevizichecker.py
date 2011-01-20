@@ -17,12 +17,15 @@
 ##
 ## Usage
 ## -----
+##   python vtelevizichecker.py username rsshash
+## where username is your vtelevizi.cz username and rsshash is a secret part
+## of your RSS url.
+##
 ## There are three configuration variables.
-## - RSS_BASE_LINK - link to your rss feed from vtelevizi.cz. You have to
-##                   to include the token at the end of the URL.
 ## - RSS_UPDATE_TIME - after how many minutes the feed will be refreshed
 ## - TELL_ME_N_MINUTES_BEFORE - how many minutes before the start of the show
-##                             the notification should be displayed
+##                             the notification should be displayed. It is then
+##                             shown every minute until the start of the show.
 ##
 ## After configuration, the script runs in an infinite loop. Every minute, it
 ## checkes whether some show is starting in n minutes. If yes, a notification
@@ -43,7 +46,7 @@
 ### imports
 
 import time
-
+import sys
 from HTMLParser import HTMLParser
 import datetime
 import logging
@@ -54,8 +57,8 @@ from xml.etree import ElementTree
 ### credentials
 
 __author__ = "Jirka Chadima"
-__date__ = "$Thu Jan 13 13:23:35 CET 2011$"
-__version__ = "0.4.1"
+__date__ = "$Thu Jan 20 16:45:26 CET 2011$"
+__version__ = "0.5"
 
 ### basic configuration
 
@@ -66,7 +69,7 @@ DEBUG = False
 
 ### user configuration
 
-RSS_BASE_LINK = BASE_URL + "export/rss/..."
+RSS_BASE_LINK = BASE_URL + "export/rss/"
 RSS_UPDATE_TIME = 5
 TELL_ME_N_MINUTES_BEFORE = 2
 
@@ -127,15 +130,15 @@ def shift_loctime(loctime, minutes_shift):
     """Adds given minutes to a loctime"""
     return loctime + datetime.timedelta(minutes=minutes_shift)
 
-def refresh_rss():
+def refresh_rss(rss_link):
     """Refreshes RSS feed and updates 'database' of TV shows. Does not append
     tv shows that are in progress."""
-    logging.info("Refreshing RSS...")
+    logging.info("Refreshing RSS on %s..." % rss_link)
     global database
     ids = {}
 
     try:
-        feed = urllib.urlopen(RSS_BASE_LINK)
+        feed = urllib.urlopen(rss_link)
         tree = ElementTree.XML(feed.read())
         feed.close()
         items = tree.find('channel').findall('item')
@@ -158,16 +161,19 @@ def refresh_rss():
             title = item.find('title').text
             date_parsed = datetime.datetime(* time.strptime(' '.join(item.find('pubDate').text.split(' ')[:-1]), "%a, %d %b %Y %H:%M:%S")[:6])
 
-            if loctime < date_parsed:
-                logging.debug("Getting channel...")
-                f = urllib.urlopen(BASE_URL + DETAIL_SLUG + id)
-                retriever = ChannelRetriever()
-                retriever.feed(f.read())
-                channel = retriever.get_channel()
-                f.close()
-                retriever.close()
-                logging.debug("Got channel...")
-                database[id] = Show(title, date_parsed, id, channel)
+            try:
+                if loctime < date_parsed:
+                    logging.debug("Getting channel...")
+                    f = urllib.urlopen(BASE_URL + DETAIL_SLUG + id)
+                    retriever = ChannelRetriever()
+                    retriever.feed(f.read())
+                    channel = retriever.get_channel()
+                    f.close()
+                    retriever.close()
+                    logging.debug("Got channel...")
+                    database[id] = Show(title, date_parsed, id, channel)
+            except Exception, e:
+                logging.error("Can't get channel...")
     
     except Exception, e:
         logging.error(e)
@@ -182,12 +188,34 @@ if __name__ == "__main__":
     
     logging.info("Starting v televizi checker %s" % __version__)
 
+    # check libnotify capabilities
+    if not pynotify.init("icon-summary-body"):
+        logging.fatal("Your libnotify does not support required format.")
+        sys.exit(1)
+
+    # check arguments (username + secret key)
+    if len(sys.argv) < 3:
+        logging.fatal("Not enough arguments! Sample usage: python vtelevizi.py username hash")
+        sys.exit(1)
+
+    uname = sys.argv[1]
+    hash = sys.argv[2]
+    rss_link = RSS_BASE_LINK + uname + '/' + hash
+    # check viable rss feed
+    try:
+        feed = urllib.urlopen(rss_link)
+        ElementTree.XML(feed.read())
+        feed.close()
+    except Exception, e:
+        logging.fatal("Check username and hash, on %s is not a viable RSS feed!" % rss_link)
+        sys.exit(1)
+
     counter = 0
     db = database
     try:
         while True:
             if counter % RSS_UPDATE_TIME == 0:
-                refresh_rss()
+                refresh_rss(rss_link)
                 db = sorted(database.values(), key=lambda show: show.timestamp)
                 logging.info("There are currently %i records in your personal schedule..." % len(database))
 
@@ -210,4 +238,5 @@ if __name__ == "__main__":
             time.sleep(60)
     except KeyboardInterrupt, e:
         logging.info("Caught Ctrl+C, terminating...")
+        sys.exit(0)
 
