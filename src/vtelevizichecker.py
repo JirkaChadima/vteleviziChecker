@@ -222,16 +222,22 @@ if __name__ == "__main__":
             if len(db) > 0:
                 try:
                     loctime = shift_loctime(datetime.datetime(*time.localtime()[:6]), TELL_ME_N_MINUTES_BEFORE)
-                    show = db[0]
+                    now = datetime.datetime(*time.localtime()[:6])
+                    count = -1
+                    for show in db :
+                        count += 1
+                        if show.timestamp < now :
+                            logging.info("Wiping out %s, already running" % show.title)
+                            del database[show.id]
+                            del db[count]
+                        elif show.timestamp < loctime :
+                            n = pynotify.Notification(show.title, show.channel + ", " + show.timestamp.strftime("%d. %m. %Y %H:%M"), "video-display")
+                            n.show()
+                            logging.info("Showing %s" % show.title)
+                        else :
+                            break
 
-                    if show.timestamp < datetime.datetime(*time.localtime()[:6]):
-                        logging.info("Wiping out %s, already running" % show.title)
-                        del database[show.id]
-                        del db[0]
-                    elif loctime > show.timestamp:
-                        n = pynotify.Notification(show.title, show.channel + ", " + show.timestamp.strftime("%d. %m. %Y %H:%M"), "video-display")
-                        n.show()
-                        logging.info("Showing %s" % show.title)
+
                 except Exception, e:
                     logging.error("V televizi exception: ", e)
             counter += 1
