@@ -176,15 +176,19 @@ def refresh_rss(rss_link):
                 logging.error("Can't get channel...")
     
     except Exception, e:
-        logging.error(e)
+        logging.error("RSS feed error: %s", e)
 
 ### main loop
 
 if __name__ == "__main__":
     if DEBUG:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s:%(levelname)s:%(message)s')
     else:
-        logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
+        logging.basicConfig(filename=LOG_FILENAME,
+                            level=logging.INFO,
+                            format='%(asctime)s:%(levelname)s:%(message)s')
+
     
     logging.info("Starting v televizi checker %s" % __version__)
 
@@ -201,20 +205,12 @@ if __name__ == "__main__":
     uname = sys.argv[1]
     hash = sys.argv[2]
     rss_link = RSS_BASE_LINK + uname + '/' + hash
-    # check viable rss feed
-    try:
-        feed = urllib.urlopen(rss_link)
-        ElementTree.XML(feed.read())
-        feed.close()
-    except Exception, e:
-        logging.fatal("Check username and hash, on %s is not a viable RSS feed!" % rss_link)
-        sys.exit(1)
 
     counter = 0
     db = database
     try:
         while True:
-            if counter % RSS_UPDATE_TIME == 0:
+            if counter == 0 or counter % RSS_UPDATE_TIME == 0:
                 refresh_rss(rss_link)
                 db = sorted(database.values(), key=lambda show: show.timestamp)
                 logging.info("There are currently %i records in your personal schedule..." % len(database))
