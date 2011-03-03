@@ -21,14 +21,14 @@
 ## where username is your vtelevizi.cz username and rsshash is a secret part
 ## of your RSS url.
 ##
-## There are three configuration variables.
+## There are two configuration variables.
 ## - RSS_UPDATE_TIME - after how many minutes the feed will be refreshed
 ## - TELL_ME_N_MINUTES_BEFORE - how many minutes before the start of the show
 ##                             the notification should be displayed. It is then
 ##                             shown every minute until the start of the show.
 ##
 ## After configuration, the script runs in an infinite loop. Every minute, it
-## checkes whether some show is starting in n minutes. If yes, a notification
+## checks whether some show is starting in n minutes. If yes, a notification
 ## is shown. It is then shown every minute until the show starts. Every m
 ## minutes, RSS feed is checked again to include updates. Items are stored
 ## in local list, every time RSS is refreshed, the list is deleted.
@@ -36,7 +36,7 @@
 ##
 ## Author
 ## ------
-## Jirka Chadima, chadima.jiri@gmail.com, 01/2010
+## Jirka Chadima, chadima.jiri@gmail.com, 01/2011
 ##
 ## License
 ## -------
@@ -57,8 +57,7 @@ from xml.etree import ElementTree
 ### credentials
 
 __author__ = "Jirka Chadima"
-__date__ = "$Thu Jan 20 16:45:26 CET 2011$"
-__version__ = "0.5"
+__version__ = "0.6"
 
 ### basic configuration
 
