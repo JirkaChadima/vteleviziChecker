@@ -12,8 +12,8 @@
 ##
 ## Dependencies
 ## ------------
-## For correct usage, you have to have python-notify package installed.
-## It is available in standard repositories.
+## For correct usage, you have to have python-notify and python-dateutil packages
+## installed.
 ##
 ## Usage
 ## -----
@@ -49,6 +49,7 @@ import time
 import sys
 from HTMLParser import HTMLParser
 import datetime
+from dateutil import parser
 import logging
 import pynotify
 import urllib
@@ -158,7 +159,7 @@ def refresh_rss(rss_link):
                 continue
 
             title = item.find('title').text
-            date_parsed = datetime.datetime(* time.strptime(' '.join(item.find('pubDate').text.split(' ')[:-1]), "%a, %d %b %Y %H:%M:%S")[:6])
+            date_parsed = parser.parse(' '.join(item.find('pubDate').text.split(' ')[:-1]))
 
             try:
                 if loctime < date_parsed:
@@ -172,7 +173,7 @@ def refresh_rss(rss_link):
                     logging.debug("Got channel...")
                     database[id] = Show(title, date_parsed, id, channel)
             except Exception, e:
-                logging.error("Can't get channel...")
+                logging.error("Can't get channel... (%s)", e)
     
     except Exception, e:
         logging.error("RSS feed error: %s", e)
